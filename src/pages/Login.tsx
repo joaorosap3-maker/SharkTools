@@ -6,14 +6,21 @@ import { checkRateLimit, recordFailedAttempt, clearRateLimit } from "../security
 import { logFailedLogin } from "../security/auditLogger";
 
 export default function Login() {
+    const [mode, setMode] = useState<"login" | "register">("login");
     const [email, setEmail] = useState("");
     const [senha, setSenha] = useState("");
+    const [fullName, setFullName] = useState("");
     const [mensagem, setMensagem] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (mode === "register") {
+            await handleRegister();
+            return;
+        }
         
         // 1. Sanitize
         const cleanEmail = sanitizeText(email).toLowerCase();
@@ -62,6 +69,44 @@ export default function Login() {
         }
     };
 
+    const handleRegister = async () => {
+        setIsLoading(true);
+        setMensagem("");
+
+        try {
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password: senha,
+                options: {
+                    data: {
+                        full_name: fullName,
+                    },
+                },
+            });
+
+            if (error) {
+                console.error("Erro cadastro:", error.message);
+                setMensagem("Erro ao criar conta: " + error.message);
+                return;
+            }
+
+            alert("Conta criada com sucesso. Faça login.");
+            setFullName("");
+            setEmail("");
+            setSenha("");
+            setMode("login");
+        } catch (err) {
+            setMensagem("Erro de conexão. Verifique sua internet.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const switchMode = () => {
+        setMensagem("");
+        setMode((prev) => (prev === "login" ? "register" : "login"));
+    };
+
     return (
         <div className="min-h-screen flex flex-col justify-center items-center bg-background-light dark:bg-background-dark p-4">
             <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl overflow-hidden border border-slate-200 dark:border-slate-800">
@@ -78,6 +123,22 @@ export default function Login() {
                         {mensagem && (
                             <div className="p-3 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm border border-red-200 dark:border-red-500/20 text-center animate-in fade-in duration-300">
                                 {mensagem}
+                            </div>
+                        )}
+
+                        {mode === "register" && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome completo</label>
+                                <input
+                                    type="text"
+                                    autoComplete="name"
+                                    placeholder="Seu nome completo"
+                                    value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 transition-all"
+                                    required
+                                    disabled={isLoading}
+                                />
                             </div>
                         )}
 
@@ -99,7 +160,7 @@ export default function Login() {
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Senha</label>
                             <input
                                 type="password"
-                                autoComplete="current-password"
+                                autoComplete={mode === "register" ? "new-password" : "current-password"}
                                 placeholder="••••••••"
                                 value={senha}
                                 onChange={(e) => setSenha(e.target.value)}
@@ -120,10 +181,23 @@ export default function Login() {
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    Autenticando...
+                                    {mode === "register" ? "Criando conta..." : "Autenticando..."}
                                 </span>
-                            ) : "Acessar Sistema"}
+                            ) : mode === "register" ? "Criar conta" : "Acessar Sistema"}
                         </button>
+
+                        <div className="mt-4 text-center">
+                            <button
+                                type="button"
+                                onClick={() => setMode(mode === "login" ? "register" : "login")}
+                                className="text-sm text-blue-600 hover:underline focus:outline-none"
+                                disabled={isLoading}
+                            >
+                                {mode === "login"
+                                    ? "Não possui conta? Criar conta"
+                                    : "Já possui conta? Fazer login"}
+                            </button>
+                        </div>
                     </form>
                 </div>
 
