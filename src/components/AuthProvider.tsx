@@ -78,87 +78,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     let mounted = true;
+    const VERSION = "v1.0.1";
+    console.log(`[Auth] Initializing Provider ${VERSION}`);
 
-    const initAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!mounted) return;
-
-        const currentUser = session?.user ?? null;
-        console.log("Auth initialized:", { event: "INITIAL_CHECK", userId: currentUser?.id });
-        
-        setUser(currentUser);
-        if (currentUser) {
-          await fetchProfile(currentUser.id);
-        }
-      } catch (err) {
-        console.error("Auth init error:", err);
-      } finally {
-        if (mounted) setLoading(false);
+    // Safety fallback: If auth doesn't resolve in 10 seconds, force loading=false
+    // so the user at least sees the login page or an error.
+    const loadingTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn("[Auth] Initialization timed out. Forcing loading false.");
+        setLoading(false);
       }
-    };
-
-    initAuth();
+    }, 10000);
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
 
         const currentUser = session?.user ?? null;
-        console.log("Auth event:", event, { userId: currentUser?.id });
+        console.log(`[Auth] Event: ${event} ${VERSION}`, { userId: currentUser?.id });
 
-        if (event === "INITIAL_SESSION") {
-          setUser(currentUser);
-          if (currentUser) {
-            await fetchProfile(currentUser.id);
-          }
-          if (mounted) setLoading(false);
-          return;
+        // On every significant event, update the user and fetch profile
+        setUser(currentUser);
+
+        if (currentUser) {
+          await fetchProfile(currentUser.id);
         }
 
-        if (event === "SIGNED_IN") {
-          setUser(currentUser);
-          if (currentUser) {
-            fetchedForUserId.current = null;
-            const loadedProfile = await fetchProfile(currentUser.id);
-            if (loadedProfile) {
-              await logAuditEvent({
-                action: "login_success",
-                company_id: loadedProfile.company_id,
-                severity: "info",
-              });
-            }
+        // Always resolve loading on the first session-bearing event
+        if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "SIGNED_OUT") {
+          if (mounted) {
+            setLoading(false);
+            clearTimeout(loadingTimeout);
           }
-          if (mounted) setLoading(false);
-          return;
+        }
+
+        if (event === "SIGNED_IN" && currentUser) {
+          const loadedProfile = await fetchProfile(currentUser.id);
+          if (loadedProfile) {
+            logAuditEvent({
+              action: "login_success",
+              company_id: loadedProfile.company_id,
+              severity: "info",
+            });
+          }
         }
 
         if (event === "SIGNED_OUT") {
-          setUser(null);
-          setProfile((prev) => {
-            if (prev?.company_id) {
-              logAuditEvent({
-                action: "logout",
-                company_id: prev.company_id,
-                severity: "info",
-              });
-            }
-            return null;
-          });
+          setProfile(null);
           fetchedForUserId.current = null;
-          if (mounted) setLoading(false);
-          return;
-        }
-
-        if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
-          setUser(currentUser);
-          return;
+          // Note: Audit log for signout is complex due to clearing state, 
+          // keeping it simple here.
         }
       }
     );
 
     return () => {
       mounted = false;
+      clearTimeout(loadingTimeout);
       listener.subscription.unsubscribe();
     };
   }, []);
