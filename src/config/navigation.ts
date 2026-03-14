@@ -32,7 +32,7 @@ export const NAVIGATION_CONFIG: NavCore[] = [
     icon: 'groups',
     items: [
       { id: 'clientes', label: 'Clientes', path: '/clientes', icon: 'person' },
-      { id: 'orcamentos', label: 'Orçamentos', path: '#', icon: 'description', isPlaceholder: true },
+      { id: 'orcamentos', label: 'Orçamentos', path: '/orcamentos', icon: 'description' },
       { id: 'locacoes', label: 'Locações', path: '/locacoes', icon: 'receipt_long' },
       { id: 'calendario', label: 'Calendário', path: '/calendario', icon: 'calendar_today' },
     ]
@@ -43,7 +43,7 @@ export const NAVIGATION_CONFIG: NavCore[] = [
     icon: 'engineering',
     items: [
       { id: 'inventario', label: 'Equipamentos', path: '/inventario', icon: 'inventory_2' },
-      { id: 'manutencao', label: 'Manutenção', path: '#', icon: 'build', isPlaceholder: true },
+      { id: 'manutencao', label: 'Manutenção', path: '/manutencoes', icon: 'build' },
     ]
   },
   {

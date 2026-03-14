@@ -18,6 +18,10 @@ import Billing from "./pages/Billing";
 
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
+import Quotes from "./pages/Quotes";
+import QuoteDetails from "./pages/QuoteDetails";
+import Maintenance from "./pages/Maintenance";
+import MaintenanceDetails from "./pages/MaintenanceDetails";
 
 import PrivateRoute from "./components/PrivateRoute";
 import { AuthProvider } from "./components/AuthProvider";
@@ -54,6 +58,14 @@ export default function App() {
             <Route path="/locacoes/editar/:id" element={<NewRental />} />
             <Route path="/financeiro" element={<Financial />} />
             <Route path="/fiscal" element={<Fiscal />} />
+
+            <Route path="/orcamentos" element={<Quotes />} />
+            <Route path="/orcamentos/novo" element={<QuoteDetails />} />
+            <Route path="/orcamentos/editar/:id" element={<QuoteDetails />} />
+
+            <Route path="/manutencoes" element={<Maintenance />} />
+            <Route path="/manutencoes/nova" element={<MaintenanceDetails />} />
+            <Route path="/manutencoes/editar/:id" element={<MaintenanceDetails />} />
 
             {/* Rotas admin - com proteção extra de role */}
             <Route
