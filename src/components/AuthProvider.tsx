@@ -1,4 +1,3 @@
-// src/components/AuthProvider.tsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../services/supabaseClient";
 import { logAuditEvent } from "../security/auditLogger";
@@ -10,11 +9,11 @@ interface AuthContextProps {
     isAdmin: boolean;
 }
 
-const AuthContext = createContext<AuthContextProps>({ 
-    user: null, 
+const AuthContext = createContext<AuthContextProps>({
+    user: null,
     profile: null,
     loading: true,
-    isAdmin: false
+    isAdmin: false,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -25,68 +24,86 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const fetchProfile = async (userId: string) => {
         try {
             const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single();
+                .from("profiles")
+                .select("*")
+                .eq("id", userId)
+                .maybeSingle();
 
-            if (data && !error) {
-                setProfile(data);
-                return data;
+            if (error) {
+                console.error("Profile fetch error:", error);
+                return null;
             }
-            return null;
+
+            setProfile(data ?? null);
+            return data ?? null;
         } catch (err) {
-            console.error("Error fetching profile:", err);
+            console.error("Unexpected profile error:", err);
             return null;
         }
     };
 
     useEffect(() => {
-        // Checa sessão atual
-        supabase.auth.getSession().then(({ data }) => {
-            const currentUser = data.session?.user ?? null;
-            setUser(currentUser);
-            if (currentUser) {
-                fetchProfile(currentUser.id).finally(() => setLoading(false));
-            } else {
-                setLoading(false);
-            }
-        });
+        let mounted = true;
 
-        // Listener de mudança de autenticação
+        const initAuth = async () => {
+            try {
+                const { data } = await supabase.auth.getSession();
+                const currentUser = data.session?.user ?? null;
+
+                if (!mounted) return;
+
+                setUser(currentUser);
+
+                if (currentUser) {
+                    await fetchProfile(currentUser.id);
+                }
+
+            } catch (err) {
+                console.error("Auth init error:", err);
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        };
+
+        initAuth();
+
         const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
             const currentUser = session?.user ?? null;
+
             setUser(currentUser);
-            
+
             if (currentUser) {
                 const loadedProfile = await fetchProfile(currentUser.id);
-                
-                if (event === 'SIGNED_IN' && loadedProfile) {
+
+                if (event === "SIGNED_IN" && loadedProfile) {
                     await logAuditEvent({
-                        action: 'login_success',
+                        action: "login_success",
                         company_id: loadedProfile.company_id,
-                        severity: 'info'
+                        severity: "info",
                     });
                 }
             } else {
-                if (event === 'SIGNED_OUT' && profile) {
+                if (event === "SIGNED_OUT" && profile) {
                     await logAuditEvent({
-                        action: 'logout',
+                        action: "logout",
                         company_id: profile.company_id,
-                        severity: 'info'
+                        severity: "info",
                     });
                 }
+
                 setProfile(null);
             }
+
             setLoading(false);
         });
 
         return () => {
+            mounted = false;
             listener.subscription.unsubscribe();
         };
     }, []);
 
-    const isAdmin = profile?.role === 'admin';
+    const isAdmin = profile?.role === "admin";
 
     return (
         <AuthContext.Provider value={{ user, profile, loading, isAdmin }}>
@@ -95,4 +112,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => useContext(AuthContext);

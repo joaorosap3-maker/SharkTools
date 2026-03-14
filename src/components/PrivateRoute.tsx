@@ -4,7 +4,7 @@ import { useAuth } from "./AuthProvider";
 
 interface Props {
     children: React.ReactNode;
-    requiredRole?: 'admin' | 'user' | 'manager' | 'client';
+    requiredRole?: "admin" | "manager" | "user" | "client";
 }
 
 export default function PrivateRoute({ children, requiredRole }: Props) {
@@ -22,11 +22,20 @@ export default function PrivateRoute({ children, requiredRole }: Props) {
         return <Navigate to="/login" replace />;
     }
 
-    // Role-based protection
-    if (requiredRole && profile) {
-        const roleHierarchy = { admin: 4, manager: 3, user: 2, client: 1 };
-        const userRole = (profile.role || 'user') as keyof typeof roleHierarchy;
-        
+    if (requiredRole) {
+        if (!profile) {
+            return <Navigate to="/login" replace />;
+        }
+
+        const roleHierarchy = {
+            admin: 4,
+            manager: 3,
+            user: 2,
+            client: 1,
+        };
+
+        const userRole = (profile.role || "user") as keyof typeof roleHierarchy;
+
         if (roleHierarchy[userRole] < roleHierarchy[requiredRole]) {
             console.warn(`Access denied: required ${requiredRole}, user is ${userRole}`);
             return <Navigate to="/" replace />;
@@ -34,4 +43,4 @@ export default function PrivateRoute({ children, requiredRole }: Props) {
     }
 
     return <>{children}</>;
-}
+}
