@@ -1,4 +1,4 @@
-import { supabase } from "../lib/supabase";
+import { supabase } from "./supabaseClient";
 
 export async function getDashboardStats() {
   try {
@@ -26,13 +26,11 @@ export async function getDashboardStats() {
       .order("start_date", { ascending: false })
       .limit(5);
 
-    const faturamentoMensal = [];
-
     return {
       totalClientes: totalClientes || 0,
       totalEquipamentos: totalEquipamentos || 0,
       totalLocacoes: totalLocacoes || 0,
-      faturamentoMensal,
+      faturamentoMensal: [],
       recentRentals: recentRentals || [],
     };
   } catch (error) {
