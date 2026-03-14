@@ -14,7 +14,7 @@ export const useReports = () => {
       // 1. Fetch Revenue Data (Invoices)
       const { data: invoices, error: invError } = await supabase
         .from("invoices")
-        .select("total_amount, created_at")
+        .select("total, issued_at")
         .eq("company_id", companyId)
         .eq("status", "paid");
 
@@ -43,9 +43,9 @@ export const useReports = () => {
       const revenueByMonth: Record<string, number> = {};
       
       invoices?.forEach(inv => {
-        const date = new Date(inv.created_at);
+        const date = new Date(inv.issued_at);
         const monthKey = `${months[date.getMonth()]} ${date.getFullYear()}`;
-        revenueByMonth[monthKey] = (revenueByMonth[monthKey] || 0) + (inv.total_amount || 0);
+        revenueByMonth[monthKey] = (revenueByMonth[monthKey] || 0) + (Number(inv.total) || 0);
       });
 
       const revenueData = Object.keys(revenueByMonth).map(key => ({
@@ -83,7 +83,7 @@ export const useReports = () => {
         toolsStatusData,
         topToolsData,
         stats: {
-          totalRevenue: invoices?.reduce((acc, curr) => acc + (curr.total_amount || 0), 0) || 0,
+          totalRevenue: invoices?.reduce((acc, curr) => acc + (Number(curr.total) || 0), 0) || 0,
           activeRentals: rentals?.length || 0,
           totalTools: inventory?.length || 0,
         }

@@ -16,7 +16,8 @@ export const useCalendar = () => {
         .select(`
           *,
           clients (name, email, phone),
-          equipment_assets (name)
+          equipment_assets (name),
+          invoices (total)
         `)
         .eq("company_id", companyId);
 
@@ -33,7 +34,7 @@ export const useCalendar = () => {
             clientId: rental.client_id,
             startDate: rental.start_date,
             endDate: rental.end_date,
-            total: rental.total_amount || 0
+            total: rental.invoices?.[0]?.total || 0
         }
       }));
     },

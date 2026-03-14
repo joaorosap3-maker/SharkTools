@@ -35,7 +35,7 @@ export const useDashboard = () => {
           .eq("company_id", companyId),
         supabase
           .from("invoices")
-          .select("total_amount")
+          .select("total")
           .eq("company_id", companyId)
           .eq("status", "paid")
       ]);
@@ -61,7 +61,7 @@ export const useDashboard = () => {
       if (recentError) throw recentError;
 
       const stats: DashboardStats = {
-        totalRevenue: revenueRes.data.reduce((acc, curr) => acc + (curr.total_amount || 0), 0),
+        totalRevenue: revenueRes.data.reduce((acc, curr) => acc + (Number(curr.total) || 0), 0),
         activeRentals: rentalsRes.data.filter(r => r.status === "active").length,
         availableEquipment: equipmentRes.data.filter(e => e.status === "available").length,
         overdueRentals: rentalsRes.data.filter(r => r.status === "overdue").length,
