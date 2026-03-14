@@ -21,6 +21,7 @@ interface AuthContextProps {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  profileLoading: boolean;
   isAdmin: boolean;
 }
 
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextProps>({
   user: null,
   profile: null,
   loading: true,
+  profileLoading: false,
   isAdmin: false,
 });
 
@@ -37,6 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   // Track the last userId we fetched a profile for to prevent redundant calls.
   const fetchedForUserId = useRef<string | null>(null);
@@ -44,51 +47,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const fetchingRef = useRef(false);
 
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
-    // Skip if we already have the profile for this user or a fetch is in flight.
     if (fetchedForUserId.current === userId || fetchingRef.current) {
       return profile;
     }
 
+    console.log(`[Auth] Fetching profile for ${userId}...`);
     fetchingRef.current = true;
+    setProfileLoading(true);
+
+    // Create a timeout promise to race against the query
+    const timeoutPromise = new Promise<null>((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout")), 5000)
+    );
+
     try {
-      const { data, error } = await supabase
+      const queryPromise = supabase
         .from("profiles")
         .select("*")
         .eq("id", userId)
         .maybeSingle();
 
+      const result = await Promise.race([queryPromise, timeoutPromise]);
+      
+      // If we got here, it's not a timeout
+      const { data, error } = result as any;
+
       if (error) {
-        // maybeSingle() returns null (not 406) when row is absent.
-        // A real error here is unexpected — log and continue gracefully.
-        console.error("Profile fetch error:", error);
+        console.error("[Auth] Profile fetch error:", error);
         return null;
       }
 
       const fetched = data ?? null;
+      console.log("[Auth] Profile received:", fetched?.role || "no-role");
       fetchedForUserId.current = userId;
       setProfile(fetched);
       return fetched;
-    } catch (err) {
-      console.error("Unexpected profile error:", err);
+    } catch (err: any) {
+      if (err.message === "Timeout") {
+        console.warn("[Auth] Profile fetch TIMED OUT (5s). Using fallback.");
+      } else {
+        console.error("[Auth] Unexpected profile error:", err);
+      }
       return null;
     } finally {
       fetchingRef.current = false;
+      setProfileLoading(false);
     }
   };
 
   useEffect(() => {
     let mounted = true;
-    const VERSION = "v1.0.1";
+    const VERSION = "v1.0.2";
     console.log(`[Auth] Initializing Provider ${VERSION}`);
 
-    // Safety fallback: If auth doesn't resolve in 10 seconds, force loading=false
-    // so the user at least sees the login page or an error.
+    // Session fallback
     const loadingTimeout = setTimeout(() => {
       if (mounted && loading) {
-        console.warn("[Auth] Initialization timed out. Forcing loading false.");
+        console.warn("[Auth] Session initialization timed out. Forcing loading false.");
         setLoading(false);
       }
-    }, 10000);
+    }, 8000);
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -97,37 +115,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const currentUser = session?.user ?? null;
         console.log(`[Auth] Event: ${event} ${VERSION}`, { userId: currentUser?.id });
 
-        // On every significant event, update the user and fetch profile
         setUser(currentUser);
 
+        // ALWAYS resolve session loading as soon as we have an event
+        if (mounted) {
+          setLoading(false);
+          clearTimeout(loadingTimeout);
+        }
+
         if (currentUser) {
-          await fetchProfile(currentUser.id);
-        }
-
-        // Always resolve loading on the first session-bearing event
-        if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "SIGNED_OUT") {
-          if (mounted) {
-            setLoading(false);
-            clearTimeout(loadingTimeout);
-          }
-        }
-
-        if (event === "SIGNED_IN" && currentUser) {
-          const loadedProfile = await fetchProfile(currentUser.id);
-          if (loadedProfile) {
-            logAuditEvent({
-              action: "login_success",
-              company_id: loadedProfile.company_id,
-              severity: "info",
-            });
-          }
+          // Fetch profile in the background — don't await here to avoid blocking and loops
+          fetchProfile(currentUser.id).then(loadedProfile => {
+            if (event === "SIGNED_IN" && loadedProfile) {
+              logAuditEvent({
+                action: "login_success",
+                company_id: loadedProfile.company_id,
+                severity: "info",
+              });
+            }
+          });
         }
 
         if (event === "SIGNED_OUT") {
           setProfile(null);
           fetchedForUserId.current = null;
-          // Note: Audit log for signout is complex due to clearing state, 
-          // keeping it simple here.
         }
       }
     );
@@ -142,7 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const isAdmin = profile?.role === "admin";
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, isAdmin }}>
+    <AuthContext.Provider value={{ user, profile, loading, profileLoading, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

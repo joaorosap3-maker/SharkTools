@@ -27,17 +27,27 @@ export default function Dashboard() {
   const [rentals, setRentals] = useState<Rental[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const loadingRef = React.useRef(false);
+
   useEffect(() => {
     loadDashboard();
   }, []);
 
   async function loadDashboard() {
+    if (loadingRef.current) {
+      console.log("[Dashboard] Request already in flight. Skipping.");
+      return;
+    }
+
     try {
+      console.log("[Dashboard] Loading stats (v1.0.2)...");
+      loadingRef.current = true;
       setLoading(true);
 
       const data = await getDashboardStats();
 
       if (data) {
+        console.log("[Dashboard] Stats received:", data);
         setStats({
           faturamentoMensal: data.faturamentoMensal || [],
           totalClientes: data.totalClientes || 0,
@@ -48,11 +58,20 @@ export default function Dashboard() {
         setRentals(data.recentRentals || []);
       }
     } catch (error) {
-      console.error("Dashboard error loading Data", error);
+      console.error("[Dashboard] Error loading Data", error);
     } finally {
-      setLoading(false);
+      if (mounted) {
+        setLoading(false);
+        loadingRef.current = false;
+      }
     }
   }
+
+  // Define mounted state for safety
+  const [mounted, setMounted] = useState(true);
+  useEffect(() => {
+    return () => setMounted(false);
+  }, []);
 
   if (loading) {
     return (
