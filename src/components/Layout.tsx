@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
+import { useAuth } from './AuthProvider';
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export default function Layout({ children }: LayoutProps) {
+  const { profile, loading, profileLoading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const path = location.pathname;
@@ -127,8 +129,14 @@ export default function Layout({ children }: LayoutProps) {
               />
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-bold text-primary dark:text-white">Carlos Silva</span>
-              <span className="text-[10px] text-slate-500">Super Admin</span>
+              <span className="text-xs font-bold text-primary dark:text-white">
+                {profile?.full_name || 'Usuário'}
+              </span>
+              <span className="text-[10px] text-slate-500 uppercase">
+                {profile?.role === 'admin' ? 'Super Admin' : 
+                 profile?.role === 'manager' ? 'Gerente' : 
+                 profile?.role === 'client' ? 'Cliente' : 'Usuário'}
+              </span>
             </div>
           </div>
         </div>

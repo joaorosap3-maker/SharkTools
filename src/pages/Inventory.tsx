@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
+import { useAuth } from '../components/AuthProvider';
 
 interface Tool {
   id: string;
@@ -12,12 +13,13 @@ interface Tool {
 }
 
 export default function Inventory() {
+  const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [tools, setTools] = useState<Tool[]>([]);
-  const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const userCompanyId = profile?.company_id;
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,32 +36,20 @@ export default function Inventory() {
   });
 
   useEffect(() => {
-    fetchUserDataAndTools();
-  }, []);
+    if (userCompanyId) {
+      fetchTools();
+    }
+  }, [userCompanyId]);
 
-  const fetchUserDataAndTools = async () => {
+  const fetchTools = async () => {
     try {
       setIsLoading(true);
 
-      // 1. Get current logged in user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // 2. Get user's company_id
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
-
-      if (profile && profile.company_id) {
-        setUserCompanyId(profile.company_id);
-      }
-
-      // 3. Get tools from database
+      // Get tools from database
       const { data: equipments, error } = await supabase
         .from('equipment_assets')
         .select('*')
+        .eq('company_id', userCompanyId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -141,7 +131,7 @@ export default function Inventory() {
       }
 
       // Reload tools
-      await fetchUserDataAndTools();
+      await fetchTools();
       handleCloseModal();
     } catch (error) {
       console.error('Error saving tool:', error);
