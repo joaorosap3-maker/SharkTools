@@ -36,89 +36,28 @@ export default function App() {
           {/* Rotas protegidas com layout */}
           <Route
             element={
-              <Layout>
-                <Outlet />
-              </Layout>
+              <PrivateRoute>
+                <Layout>
+                  <Outlet />
+                </Layout>
+              </PrivateRoute>
             }
           >
 
-            <Route
-              path="/"
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              }
-            />
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/calendario" element={<Calendar />} />
+            <Route path="/inventario" element={<Inventory />} />
+            <Route path="/locacoes" element={<Rentals />} />
+            <Route path="/locacoes/nova" element={<NewRental />} />
+            <Route path="/locacoes/editar/:id" element={<NewRental />} />
+            <Route path="/financeiro" element={<Financial />} />
+            <Route path="/fiscal" element={<Fiscal />} />
 
-            <Route
-              path="/calendario"
-              element={
-                <PrivateRoute>
-                  <Calendar />
-                </PrivateRoute>
-              }
-            />
-
-            <Route
-              path="/inventario"
-              element={
-                <PrivateRoute>
-                  <Inventory />
-                </PrivateRoute>
-              }
-            />
-
-            <Route
-              path="/locacoes"
-              element={
-                <PrivateRoute>
-                  <Rentals />
-                </PrivateRoute>
-              }
-            />
-
-            <Route
-              path="/locacoes/nova"
-              element={
-                <PrivateRoute>
-                  <NewRental />
-                </PrivateRoute>
-              }
-            />
-
-            <Route
-              path="/locacoes/editar/:id"
-              element={
-                <PrivateRoute>
-                  <NewRental />
-                </PrivateRoute>
-              }
-            />
-
-            <Route
-              path="/financeiro"
-              element={
-                <PrivateRoute>
-                  <Financial />
-                </PrivateRoute>
-              }
-            />
-
-            <Route
-              path="/fiscal"
-              element={
-                <PrivateRoute>
-                  <Fiscal />
-                </PrivateRoute>
-              }
-            />
-
-            {/* Rotas admin */}
+            {/* Rotas admin - com proteção extra de role */}
             <Route
               path="/usuarios"
               element={
-                <PrivateRoute>
+                <PrivateRoute requiredRole="admin">
                   <Users />
                 </PrivateRoute>
               }
@@ -127,29 +66,14 @@ export default function App() {
             <Route
               path="/configuracoes"
               element={
-                <PrivateRoute>
+                <PrivateRoute requiredRole="admin">
                   <Settings />
                 </PrivateRoute>
               }
             />
 
-            <Route
-              path="/relatorios"
-              element={
-                <PrivateRoute>
-                  <Reports />
-                </PrivateRoute>
-              }
-            />
-
-            <Route
-              path="/clientes"
-              element={
-                <PrivateRoute>
-                  <Clients />
-                </PrivateRoute>
-              }
-            />
+            <Route path="/relatorios" element={<Reports />} />
+            <Route path="/clientes" element={<Clients />} />
 
           </Route>
 

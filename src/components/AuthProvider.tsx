@@ -79,40 +79,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     let mounted = true;
 
-    // ----------------------------------------------------------------
-    // Step 1: Subscribe to auth state changes FIRST.
-    //
-    // Supabase immediately fires INITIAL_SESSION (or SIGNED_IN) when
-    // you call onAuthStateChange, so we rely on that single event as
-    // the source of truth and skip the separate getSession() call.
-    // This avoids the double-initialization / double-fetch race.
-    // ----------------------------------------------------------------
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+
+        const currentUser = session?.user ?? null;
+        console.log("Auth initialized:", { event: "INITIAL_CHECK", userId: currentUser?.id });
+        
+        setUser(currentUser);
+        if (currentUser) {
+          await fetchProfile(currentUser.id);
+        }
+      } catch (err) {
+        console.error("Auth init error:", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    initAuth();
+
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
 
         const currentUser = session?.user ?? null;
+        console.log("Auth event:", event, { userId: currentUser?.id });
 
         if (event === "INITIAL_SESSION") {
-          // First load: set user and fetch profile, then mark loading done.
           setUser(currentUser);
-
           if (currentUser) {
             await fetchProfile(currentUser.id);
           }
-
           if (mounted) setLoading(false);
           return;
         }
 
         if (event === "SIGNED_IN") {
           setUser(currentUser);
-
           if (currentUser) {
-            // Reset guard so we re-fetch for the newly signed-in user.
             fetchedForUserId.current = null;
             const loadedProfile = await fetchProfile(currentUser.id);
-
             if (loadedProfile) {
               await logAuditEvent({
                 action: "login_success",
@@ -121,14 +129,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               });
             }
           }
-
-          // Do NOT call setLoading here; loading was already resolved by
-          // INITIAL_SESSION. Calling it again causes unnecessary re-renders.
+          if (mounted) setLoading(false);
           return;
         }
 
         if (event === "SIGNED_OUT") {
-          // Capture company_id before clearing state for the audit log.
           setUser(null);
           setProfile((prev) => {
             if (prev?.company_id) {
@@ -141,11 +146,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             return null;
           });
           fetchedForUserId.current = null;
+          if (mounted) setLoading(false);
           return;
         }
 
-        // TOKEN_REFRESHED and USER_UPDATED: update user object only.
-        // Do NOT re-fetch profile — this is the main source of the loop.
         if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
           setUser(currentUser);
           return;
@@ -157,7 +161,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       mounted = false;
       listener.subscription.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isAdmin = profile?.role === "admin";
