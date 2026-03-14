@@ -1,6 +1,8 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
+
 import Layout from "./components/Layout";
+
 import Dashboard from "./pages/Dashboard";
 import Calendar from "./pages/Calendar";
 import Inventory from "./pages/Inventory";
@@ -12,25 +14,26 @@ import Users from "./pages/Users";
 import Reports from "./pages/Reports";
 import Clients from "./pages/Clients";
 import Settings from "./pages/Settings";
+
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
+
 import PrivateRoute from "./components/PrivateRoute";
-import { initializeData } from "./data/mockData";
 import { AuthProvider } from "./components/AuthProvider";
 
 export default function App() {
-  useEffect(() => {
-    initializeData();
-  }, []);
 
   return (
     <AuthProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Router>
+
         <Routes>
+
+          {/* Rotas públicas */}
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
 
-          {/* Rotas Protegidas com Layout */}
+          {/* Rotas protegidas com layout */}
           <Route
             element={
               <Layout>
@@ -38,23 +41,120 @@ export default function App() {
               </Layout>
             }
           >
-            <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-            <Route path="/calendario" element={<PrivateRoute><Calendar /></PrivateRoute>} />
-            <Route path="/inventario" element={<PrivateRoute><Inventory /></PrivateRoute>} />
-            <Route path="/locacoes" element={<PrivateRoute><Rentals /></PrivateRoute>} />
-            <Route path="/locacoes/nova" element={<PrivateRoute><NewRental /></PrivateRoute>} />
-            <Route path="/locacoes/editar/:id" element={<PrivateRoute><NewRental /></PrivateRoute>} />
-            <Route path="/financeiro" element={<PrivateRoute><Financial /></PrivateRoute>} />
-            <Route path="/fiscal" element={<PrivateRoute><Fiscal /></PrivateRoute>} />
-            
-            {/* Rotas Administrativas */}
-            <Route path="/usuarios" element={<PrivateRoute requiredRole="admin"><Users /></PrivateRoute>} />
-            <Route path="/configuracoes" element={<PrivateRoute requiredRole="admin"><Settings /></PrivateRoute>} />
-            
-            <Route path="/relatorios" element={<PrivateRoute><Reports /></PrivateRoute>} />
-            <Route path="/clientes" element={<PrivateRoute><Clients /></PrivateRoute>} />
+
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <Dashboard />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/calendario"
+              element={
+                <PrivateRoute>
+                  <Calendar />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/inventario"
+              element={
+                <PrivateRoute>
+                  <Inventory />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/locacoes"
+              element={
+                <PrivateRoute>
+                  <Rentals />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/locacoes/nova"
+              element={
+                <PrivateRoute>
+                  <NewRental />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/locacoes/editar/:id"
+              element={
+                <PrivateRoute>
+                  <NewRental />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/financeiro"
+              element={
+                <PrivateRoute>
+                  <Financial />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/fiscal"
+              element={
+                <PrivateRoute>
+                  <Fiscal />
+                </PrivateRoute>
+              }
+            />
+
+            {/* Rotas admin */}
+            <Route
+              path="/usuarios"
+              element={
+                <PrivateRoute>
+                  <Users />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/configuracoes"
+              element={
+                <PrivateRoute>
+                  <Settings />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/relatorios"
+              element={
+                <PrivateRoute>
+                  <Reports />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/clientes"
+              element={
+                <PrivateRoute>
+                  <Clients />
+                </PrivateRoute>
+              }
+            />
+
           </Route>
+
         </Routes>
+
       </Router>
     </AuthProvider>
   );
