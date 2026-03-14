@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
 import { useAuth } from './AuthProvider';
+import { NAVIGATION_CONFIG, NavCore, NavItem } from '../config/navigation';
+import FeatureGuard from './FeatureGuard';
 
 interface LayoutProps {
   children?: React.ReactNode;
@@ -75,18 +77,34 @@ export default function Layout({ children }: LayoutProps) {
     }
   }, [isDarkMode]);
 
-  const navItems = [
-    { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
-    { path: '/locacoes', icon: 'receipt_long', label: 'Locações' },
-    { path: '/calendario', icon: 'calendar_month', label: 'Calendário' },
-    { path: '/inventario', icon: 'inventory_2', label: 'Estoque' },
-    { path: '/clientes', icon: 'group', label: 'Clientes' },
-    { path: '/financeiro', icon: 'account_balance_wallet', label: 'Financeiro' },
-    { path: '/fiscal', icon: 'request_quote', label: 'Fiscal' },
-    { path: '/relatorios', icon: 'bar_chart', label: 'Relatórios' },
-    { path: '/usuarios', icon: 'admin_panel_settings', label: 'Usuários' },
-    { path: '/configuracoes', icon: 'settings', label: 'Configurações' },
-  ];
+  const [expandedCores, setExpandedCores] = useState<string[]>(() => {
+    // Expand the core that contains the current path by default
+    const currentCore = NAVIGATION_CONFIG.find(core => 
+      core.items.some(item => path.startsWith(item.path) && item.path !== '/')
+    );
+    return currentCore ? [currentCore.id] : ['dashboard'];
+  });
+
+  const toggleCore = (coreId: string) => {
+    setExpandedCores(prev => 
+      prev.includes(coreId) 
+        ? prev.filter(id => id !== coreId) 
+        : [...prev, coreId]
+    );
+  };
+
+  const roleHierarchy: Record<string, number> = {
+    admin: 4,
+    manager: 3,
+    user: 2,
+    client: 1,
+  };
+
+  const hasPermission = (requiredRole?: string) => {
+    if (!requiredRole) return true;
+    const userRole = profile?.role || 'user';
+    return (roleHierarchy[userRole] || 0) >= (roleHierarchy[requiredRole] || 0);
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
@@ -101,21 +119,66 @@ export default function Layout({ children }: LayoutProps) {
             <p className="text-slate-500 dark:text-slate-400 text-xs font-medium mt-1">SaaS de Gestão</p>
           </div>
         </div>
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const isActive = path === item.path || (path.startsWith(item.path) && item.path !== '/');
+        <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto custom-scrollbar">
+          {NAVIGATION_CONFIG.map((core: NavCore) => {
+            const isExpanded = expandedCores.includes(core.id);
+            const visibleItems = core.items.filter(item => hasPermission(item.requiredRole));
+            
+            if (visibleItems.length === 0) return null;
+
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive
-                  ? 'bg-primary/10 text-primary dark:text-white font-semibold'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-              >
-                <span className="material-symbols-outlined text-xl">{item.icon}</span>
-                <span className="text-sm">{item.label}</span>
-              </Link>
+              <div key={core.id} className="space-y-1">
+                <button
+                  onClick={() => toggleCore(core.id)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hover:text-primary transition-colors group"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-lg">{core.icon}</span>
+                    <span>{core.label}</span>
+                  </div>
+                  <span className={`material-symbols-outlined text-sm transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+                    expand_more
+                  </span>
+                </button>
+
+                {isExpanded && (
+                  <div className="space-y-1 animate-in slide-in-from-top-1 duration-200">
+                    {visibleItems.map((item: NavItem) => {
+                      const isActive = path === item.path || (path.startsWith(item.path) && item.path !== '/');
+                      
+                      const linkContent = (
+                        <Link
+                          to={item.isPlaceholder ? '#' : item.path}
+                          onClick={(e) => item.isPlaceholder && e.preventDefault()}
+                          className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
+                            isActive
+                              ? 'bg-primary text-white shadow-lg shadow-primary/20 font-semibold'
+                              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          } ${item.isPlaceholder ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          <span className={`material-symbols-outlined text-xl ${isActive ? 'text-white' : 'text-slate-400'}`}>
+                            {item.icon}
+                          </span>
+                          <span className="text-sm">{item.label}</span>
+                          {item.isPlaceholder && (
+                            <span className="ml-auto text-[8px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-500 uppercase">Breve</span>
+                          )}
+                        </Link>
+                      );
+
+                      if (item.requiredFeature) {
+                        return (
+                          <FeatureGuard key={item.id} feature={item.requiredFeature} hideOnly={false}>
+                            {linkContent}
+                          </FeatureGuard>
+                        );
+                      }
+
+                      return linkContent;
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
