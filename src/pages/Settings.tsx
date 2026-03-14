@@ -3,9 +3,13 @@ import { supabase } from '../services/supabaseClient';
 import { useRBAC } from '../hooks/useRBAC';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useSubscription } from '../hooks/useSubscription';
+import { useNavigate } from 'react-router-dom';
 
 export default function Settings() {
+  const navigate = useNavigate();
   const { isAdmin, profile } = useRBAC();
+  const { data: subscription } = useSubscription();
   const [activeTab, setActiveTab] = useState('company');
   const [formData, setFormData] = useState({
     id: '',
@@ -170,6 +174,14 @@ export default function Settings() {
                 </button>
               )}
 
+              <button 
+                onClick={() => navigate('/faturamento')}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm"
+              >
+                <span className="material-symbols-outlined text-lg">payments</span>
+                Assinatura e Planos
+              </button>
+
               <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm opacity-50 cursor-not-allowed">
                 <span className="material-symbols-outlined text-lg">tune</span>
                 Instâncias (SaaS)
@@ -275,6 +287,23 @@ export default function Settings() {
                       )}
                     </button>
                   </div>
+                </div>
+
+                {/* Subscription Info mini-card */}
+                <div className="mt-8 p-4 bg-primary/5 border border-primary/20 rounded-2xl flex items-center justify-between">
+                   <div className="flex items-center gap-3">
+                      <div className="size-10 bg-primary text-white flex items-center justify-center rounded-xl font-black italic">S</div>
+                      <div>
+                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Seu Plano</p>
+                         <p className="font-bold text-slate-900 dark:text-white">{subscription?.planName || 'Carregando...'}</p>
+                      </div>
+                   </div>
+                   <button 
+                     onClick={() => navigate('/faturamento')}
+                     className="px-4 py-2 bg-white dark:bg-slate-800 text-primary dark:text-white border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors"
+                   >
+                     Gerenciar
+                   </button>
                 </div>
               </>
             )}

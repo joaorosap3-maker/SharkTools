@@ -1,6 +1,7 @@
 import React, { useState, startTransition } from "react";
 import { supabase } from "../services/supabaseClient";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../components/AuthProvider";
 import { sanitizeText } from "../security/sanitize";
 import { checkRateLimit, recordFailedAttempt, clearRateLimit } from "../security/rateLimiter";
 import { logFailedLogin } from "../security/auditLogger";
@@ -13,6 +14,14 @@ export default function Login() {
     const [mensagem, setMensagem] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
+    const { user } = useAuth();
+
+    // Auto-redirect if already logged in
+    React.useEffect(() => {
+        if (user) {
+            navigate("/dashboard", { replace: true });
+        }
+    }, [user, navigate]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();

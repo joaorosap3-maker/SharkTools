@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from "react-router-dom";
 
 import Layout from "./components/Layout";
 
@@ -14,6 +14,7 @@ import Users from "./pages/Users";
 import Reports from "./pages/Reports";
 import Clients from "./pages/Clients";
 import Settings from "./pages/Settings";
+import Billing from "./pages/Billing";
 
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
@@ -44,7 +45,8 @@ export default function App() {
             }
           >
 
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/calendario" element={<Calendar />} />
             <Route path="/inventario" element={<Inventory />} />
             <Route path="/locacoes" element={<Rentals />} />
@@ -74,6 +76,7 @@ export default function App() {
 
             <Route path="/relatorios" element={<Reports />} />
             <Route path="/clientes" element={<Clients />} />
+            <Route path="/faturamento" element={<Billing />} />
 
           </Route>
 

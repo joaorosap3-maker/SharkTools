@@ -74,7 +74,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [isDarkMode]);
 
   const navItems = [
-    { path: '/', icon: 'dashboard', label: 'Dashboard' },
+    { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
     { path: '/locacoes', icon: 'receipt_long', label: 'Locações' },
     { path: '/calendario', icon: 'calendar_month', label: 'Calendário' },
     { path: '/inventario', icon: 'inventory_2', label: 'Estoque' },

@@ -1,184 +1,131 @@
-import React, { useEffect, useState } from "react";
-import { getDashboardStats } from "../services/dashboardService";
-
-type Rental = {
-  id: string;
-  start_date: string;
-  status: string;
-  clients?: { name: string } | null;
-  equipment_assets?: { name: string } | null;
-};
-
-type Stats = {
-  faturamentoMensal: { mes: string; total: number }[];
-  totalClientes: number;
-  totalEquipamentos: number;
-  totalLocacoes: number;
-};
+import { useDashboard } from "../hooks/useDashboard";
+import NotificationCenter from "../components/NotificationCenter";
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<Stats>({
-    faturamentoMensal: [],
-    totalClientes: 0,
-    totalEquipamentos: 0,
-    totalLocacoes: 0,
-  });
-
-  const [rentals, setRentals] = useState<Rental[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const loadingRef = React.useRef(false);
-
-  useEffect(() => {
-    loadDashboard();
-  }, []);
-
-  async function loadDashboard() {
-    if (loadingRef.current) {
-      console.log("[Dashboard] Request already in flight. Skipping.");
-      return;
-    }
-
-    try {
-      console.log("[Dashboard] Loading stats (v1.0.2)...");
-      loadingRef.current = true;
-      setLoading(true);
-
-      const data = await getDashboardStats();
-
-      if (data) {
-        console.log("[Dashboard] Stats received:", data);
-        setStats({
-          faturamentoMensal: data.faturamentoMensal || [],
-          totalClientes: data.totalClientes || 0,
-          totalEquipamentos: data.totalEquipamentos || 0,
-          totalLocacoes: data.totalLocacoes || 0,
-        });
-
-        setRentals(data.recentRentals || []);
-      }
-    } catch (error) {
-      console.error("[Dashboard] Error loading Data", error);
-    } finally {
-      if (mounted) {
-        setLoading(false);
-        loadingRef.current = false;
-      }
-    }
-  }
-
-  // Define mounted state for safety
-  const [mounted, setMounted] = useState(true);
-  useEffect(() => {
-    return () => setMounted(false);
-  }, []);
-
-  if (loading) {
+  const { data: stats, isLoading, isError, error, refetch } = useDashboard();
+  
+  if (isLoading) {
     return (
-      <div className="p-6">
-        <h2 className="text-xl font-semibold">Carregando dashboard...</h2>
+      <div className="flex flex-col items-center justify-center p-12 space-y-4">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-slate-500 animate-pulse font-medium">Carregando painel v1.0.3...</p>
       </div>
     );
   }
 
-  const faturamentoMensal = stats.faturamentoMensal || [];
+  if (isError) {
+    return (
+      <div className="p-8 text-center bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-800">
+        <h2 className="text-red-700 dark:text-red-400 font-bold text-lg">Erro ao carregar Dashboard</h2>
+        <p className="text-red-600 dark:text-red-500 mt-2">{(error as any)?.message || "Ocorreu um erro inesperado."}</p>
+        <button 
+          onClick={() => refetch()}
+          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+        >
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
 
-  const maxFaturamento =
-    faturamentoMensal.length > 0
-      ? Math.max(...faturamentoMensal.map((m) => m.total), 1)
-      : 1;
+  if (!stats) {
+    return (
+      <div className="p-6">
+        <h2 className="text-xl font-semibold">Nenhum dado disponível.</h2>
+      </div>
+    );
+  }
+
+  const rentals = stats.recentRentals || [];
+
+  const statsItems = [
+    { label: "Receita Total", value: `R$ ${stats.totalRevenue.toLocaleString() || "0,00"}`, icon: "payments", color: "bg-green-500" },
+    { label: "Locações Ativas", value: stats.activeRentals || 0, icon: "receipt_long", color: "bg-blue-500" },
+    { label: "Equipamentos Disponíveis", value: stats.availableEquipment || 0, icon: "inventory_2", color: "bg-yellow-500" },
+    { label: "Locações em Atraso", value: stats.overdueRentals || 0, icon: "error", color: "bg-red-500" },
+  ];
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
-
-      {/* CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white shadow rounded p-4">
-          <p className="text-gray-500">Clientes</p>
-          <h2 className="text-2xl font-bold">{stats.totalClientes}</h2>
-        </div>
-
-        <div className="bg-white shadow rounded p-4">
-          <p className="text-gray-500">Equipamentos</p>
-          <h2 className="text-2xl font-bold">{stats.totalEquipamentos}</h2>
-        </div>
-
-        <div className="bg-white shadow rounded p-4">
-          <p className="text-gray-500">Locações</p>
-          <h2 className="text-2xl font-bold">{stats.totalLocacoes}</h2>
+    <div className="p-6 pb-20 max-w-7xl mx-auto space-y-6">
+      <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Painel de Controle</h1>
+          <p className="text-slate-500 dark:text-slate-400">Bem-vindo ao SharkTools v1.0.3</p>
         </div>
       </div>
 
-      {/* GRÁFICO SIMPLES */}
-      <div className="bg-white shadow rounded p-4">
-        <h2 className="text-lg font-semibold mb-4">Faturamento mensal</h2>
+      <NotificationCenter />
 
-        {faturamentoMensal.length === 0 ? (
-          <p className="text-gray-500">Sem dados de faturamento.</p>
-        ) : (
-          <div className="space-y-2">
-            {faturamentoMensal.map((mes) => {
-              const largura = (mes.total / maxFaturamento) * 100;
-
-              return (
-                <div key={mes.mes}>
-                  <div className="flex justify-between text-sm">
-                    <span>{mes.mes}</span>
-                    <span>R$ {mes.total}</span>
-                  </div>
-
-                  <div className="w-full bg-gray-200 rounded h-3">
-                    <div
-                      className="bg-blue-500 h-3 rounded"
-                      style={{ width: `${largura}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+      {/* GRID DE ESTATÍSTICAS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {statsItems.map((item, idx) => (
+          <div key={idx} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 hover:shadow-md transition-shadow">
+            <div className="flex items-center space-x-4">
+              <div className={`${item.color} p-3 rounded-xl text-white shadow-lg`}>
+                <span className="material-symbols-outlined text-2xl">{item.icon}</span>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{item.label}</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{item.value}</p>
+              </div>
+            </div>
           </div>
-        )}
+        ))}
       </div>
 
       {/* LOCAÇÕES RECENTES */}
-      <div className="bg-white shadow rounded p-4">
-        <h2 className="text-lg font-semibold mb-4">Locações recentes</h2>
+      <div className="bg-white dark:bg-slate-900 shadow-sm rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Locações Recentes</h2>
+          <button className="text-primary hover:text-primary-dark text-sm font-semibold transition-colors">Ver todas</button>
+        </div>
 
-        {rentals.length === 0 ? (
-          <p className="text-gray-500">Nenhuma locação encontrada.</p>
-        ) : (
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b">
-                <th className="py-2">Cliente</th>
-                <th>Equipamento</th>
-                <th>Status</th>
-                <th>Data</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {rentals.map((rental) => (
-                <tr key={rental.id} className="border-b">
-                  <td className="py-2">
-                    {rental.clients?.name || "—"}
-                  </td>
-
-                  <td>
-                    {rental.equipment_assets?.name || "—"}
-                  </td>
-
-                  <td>{rental.status}</td>
-
-                  <td>
-                    {new Date(rental.start_date).toLocaleDateString()}
-                  </td>
+        <div className="overflow-x-auto">
+          {rentals.length === 0 ? (
+            <div className="p-12 text-center">
+              <p className="text-slate-500 dark:text-slate-400">Nenhuma locação ativa no momento.</p>
+            </div>
+          ) : (
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">
+                  <th className="px-6 py-4 font-semibold">Cliente</th>
+                  <th className="px-6 py-4 font-semibold">Equipamento</th>
+                  <th className="px-6 py-4 font-semibold">Status</th>
+                  <th className="px-6 py-4 font-semibold">Data Início</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                {rentals.map((rental: any) => (
+                  <tr key={rental.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                      {rental.clients?.name || "—"}
+                    </td>
+
+                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                      {rental.equipment_assets?.name || "—"}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        rental.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                        rental.status === 'overdue' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                        'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400'
+                      }`}>
+                        {rental.status === 'active' ? 'Ativo' : rental.status === 'overdue' ? 'Atrasado' : 'Encerrado'}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
+                      {new Date(rental.start_date).toLocaleDateString('pt-BR')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </div>
   );
