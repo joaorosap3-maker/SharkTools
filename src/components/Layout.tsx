@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { getGlobalSearchResults } from '../services/dashboardService';
 import { supabase } from '../services/supabaseClient';
 
 interface LayoutProps {
@@ -30,9 +29,8 @@ export default function Layout({ children }: LayoutProps) {
     { id: 3, title: 'Manutenção Concluída', message: 'Serra Circular XYZ voltou da manutenção.', time: 'Ontem', unread: false },
   ];
 
-  const filteredResults = useMemo(() => {
-    return getGlobalSearchResults(searchQuery);
-  }, [searchQuery]);
+  // Global search is not yet implemented — returns empty list
+  const filteredResults: { id: string; path: string; icon: string; title: string; subtitle: string }[] = [];
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
