@@ -9,13 +9,18 @@ import Inventory from "./pages/Inventory";
 import Rentals from "./pages/Rentals";
 import NewRental from "./pages/NewRental";
 import Financial from "./pages/Financial";
+import FinancialDashboard from "./pages/FinancialDashboard";
+import SystemLogs from "./pages/SystemLogs";
 import Fiscal from "./pages/Fiscal";
 import Users from "./pages/Users";
 import Reports from "./pages/Reports";
 import Clients from "./pages/Clients";
 import Settings from "./pages/Settings";
 import Billing from "./pages/Billing";
-
+import ContractTemplates from "./pages/ContractTemplates";
+import Assinatura from "./pages/Assinatura";
+import PortalAccess from "./pages/PortalAccess";
+import ClientPortal from "./pages/ClientPortal";
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
 import Quotes from "./pages/Quotes";
@@ -37,6 +42,9 @@ export default function App() {
           {/* Rotas públicas */}
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
+          <Route path="/assinatura/:contract_id" element={<Assinatura />} />
+          <Route path="/portal-access/:token" element={<PortalAccess />} />
+          <Route path="/portal" element={<ClientPortal />} />
 
           {/* Rotas protegidas com layout */}
           <Route
@@ -51,6 +59,7 @@ export default function App() {
 
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/financeiro" element={<FinancialDashboard />} />
             <Route path="/calendario" element={<Calendar />} />
             <Route path="/inventario" element={<Inventory />} />
             <Route path="/locacoes" element={<Rentals />} />
@@ -82,6 +91,24 @@ export default function App() {
               element={
                 <PrivateRoute requiredRole="admin">
                   <Settings />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/configuracoes/logs"
+              element={
+                <PrivateRoute requiredRole="admin">
+                  <SystemLogs />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/configuracoes/modelos"
+              element={
+                <PrivateRoute requiredRole="admin">
+                  <ContractTemplates />
                 </PrivateRoute>
               }
             />

@@ -24,6 +24,7 @@ export const NAVIGATION_CONFIG: NavCore[] = [
     icon: 'dashboard',
     items: [
       { id: 'painel', label: 'Painel Geral', path: '/dashboard', icon: 'grid_view' },
+      { id: 'dashboard-financeiro', label: 'Financeiro Pro', path: '/dashboard/financeiro', icon: 'analytics', requiredFeature: 'advanced_reports' },
     ]
   },
   {
@@ -62,7 +63,9 @@ export const NAVIGATION_CONFIG: NavCore[] = [
     icon: 'admin_panel_settings',
     items: [
       { id: 'usuarios', label: 'Usuários', path: '/usuarios', icon: 'people', requiredRole: 'admin' },
+      { id: 'modelos-contrato', label: 'Modelos de Contrato', path: '/configuracoes/modelos', icon: 'description', requiredRole: 'admin' },
       { id: 'configuracoes', label: 'Configurações', path: '/configuracoes', icon: 'settings', requiredRole: 'admin' },
+      { id: 'logs', label: 'Logs do Sistema', path: '/configuracoes/logs', icon: 'history', requiredRole: 'admin' },
       { id: 'faturamento', label: 'Billing / Planos', path: '/faturamento', icon: 'credit_card', requiredRole: 'admin' },
     ]
   }

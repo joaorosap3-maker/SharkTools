@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { formatDate, formatCurrency } from '../utils/formatters';
 import { Link } from 'react-router-dom';
-import { generateRentalContract, ContractData } from '../services/contractService';
+import { contractService, ContractData } from '../services/contractService';
 import FeatureGuard from '../components/FeatureGuard';
 
 export default function Rentals() {
@@ -20,7 +20,7 @@ export default function Rentals() {
         .from('rentals')
         .select(`
           *,
-          clients (id, name, email, phone),
+          clients (id, name, email, phone, tenant_id),
           equipment_assets (id, name),
           invoices (id, total, status)
         `)
@@ -35,27 +35,20 @@ export default function Rentals() {
     }
   };
 
-  const handleGenerateContract = (rental: any) => {
+  const handleGenerateContract = async (rental: any) => {
     try {
-      const contractData: ContractData = {
-        rentalId: rental.id,
-        startDate: rental.start_date,
-        endDate: rental.end_date,
-        status: rental.status,
-        totalPrice: rental.invoices?.[0]?.total || 0,
-        client: {
-          name: rental.clients?.name || 'Cliente Desconhecido',
-          email: rental.clients?.email,
-          phone: rental.clients?.phone,
-        },
-        equipment: {
-          name: rental.equipment_assets?.name || 'Equipamento',
-        }
-      };
+      // Find a template for this tenant
+      const templates = await contractService.getTemplates(rental.clients?.tenant_id);
+      if (!templates || templates.length === 0) {
+        alert('Nenhum modelo de contrato encontrado. Crie um modelo em Administração > Modelos de Contrato.');
+        return;
+      }
 
-      generateRentalContract(contractData);
+      await contractService.generateRentalContract(rental.id, templates[0].id);
+      alert('Contrato gerado com sucesso!');
     } catch (err) {
       console.error('Erro ao gerar contrato:', err);
+      alert('Erro ao gerar contrato.');
     }
   };
 

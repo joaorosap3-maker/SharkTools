@@ -12,7 +12,7 @@ export const useMasterData = () => {
       queryFn: async () => {
         const { data, error } = await supabase
           .from("clients")
-          .select("id, name, document")
+          .select("id, name, document, email, phone")
           .eq("company_id", companyId)
           .order("name");
         if (error) throw error;

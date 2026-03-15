@@ -4,6 +4,8 @@ import { supabase } from '../services/supabaseClient';
 import { useAuth } from './AuthProvider';
 import { NAVIGATION_CONFIG, NavCore, NavItem } from '../config/navigation';
 import FeatureGuard from './FeatureGuard';
+import { useNotifications } from '../hooks/useNotifications';
+import { formatDate } from '../utils/formatters';
 
 interface LayoutProps {
   children?: React.ReactNode;
@@ -26,12 +28,7 @@ export default function Layout({ children }: LayoutProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
-  // Exemplo de notificações estáticas para o frontend
-  const mockNotifications = [
-    { id: 1, title: 'Devolução Atrasada', message: 'Betoneira 400L (Locação #102) não foi devolvida hoje.', time: '1h atrás', unread: true },
-    { id: 2, title: 'Nova Reserva', message: 'Cliente João Silva solicitou um Martelete 800W para amanhã.', time: '3h atrás', unread: true },
-    { id: 3, title: 'Manutenção Concluída', message: 'Serra Circular XYZ voltou da manutenção.', time: 'Ontem', unread: false },
-  ];
+  const { notifications, unreadCount, markAsRead } = useNotifications();
 
   // Global search is not yet implemented — returns empty list
   const filteredResults: { id: string; path: string; icon: string; title: string; subtitle: string }[] = [];
@@ -168,9 +165,11 @@ export default function Layout({ children }: LayoutProps) {
 
                       if (item.requiredFeature) {
                         return (
-                          <FeatureGuard key={item.id} feature={item.requiredFeature} hideOnly={false}>
-                            {linkContent}
-                          </FeatureGuard>
+                          <React.Fragment key={item.id}>
+                            <FeatureGuard feature={item.requiredFeature} hideOnly={false}>
+                              {linkContent}
+                            </FeatureGuard>
+                          </React.Fragment>
                         );
                       }
 
@@ -281,8 +280,10 @@ export default function Layout({ children }: LayoutProps) {
                 title="Notificações"
               >
                 <span className="material-symbols-outlined">notifications</span>
-                {mockNotifications.some(n => n.unread) && (
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-2 right-2 w-4 h-4 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 text-[10px] text-white flex items-center justify-center font-bold">
+                    {unreadCount}
+                  </span>
                 )}
               </button>
 
@@ -294,21 +295,29 @@ export default function Layout({ children }: LayoutProps) {
                     <button className="text-xs text-primary font-medium hover:underline">Marcar todas como lidas</button>
                   </div>
                   <div className="max-h-96 overflow-y-auto">
-                    {mockNotifications.length > 0 ? (
+                    {notifications.length > 0 ? (
                       <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                        {mockNotifications.map((notif) => (
-                          <div key={notif.id} className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors ${notif.unread ? 'bg-primary/5 dark:bg-primary/10' : ''}`}>
+                        {notifications.map((notif: any) => (
+                          <div 
+                            key={notif.id} 
+                            onClick={() => {
+                              if (notif.link) navigate(notif.link);
+                              markAsRead.mutate(notif.id);
+                              setIsNotificationsOpen(false);
+                            }}
+                            className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors cursor-pointer ${!notif.read ? 'bg-primary/5 dark:bg-primary/10' : ''}`}
+                          >
                             <div className="flex gap-3">
-                              <div className={`mt-1 size-2 shrink-0 rounded-full ${notif.unread ? 'bg-primary' : 'bg-transparent'}`}></div>
+                              <div className={`mt-1 size-2 shrink-0 rounded-full ${!notif.read ? 'bg-primary' : 'bg-transparent'}`}></div>
                               <div className="flex-1 space-y-1">
-                                <p className={`text-sm ${notif.unread ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300'}`}>
+                                <p className={`text-sm ${!notif.read ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300'}`}>
                                   {notif.title}
                                 </p>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
-                                  {notif.message}
+                                  {notif.description}
                                 </p>
                                 <p className="text-[10px] text-slate-400 font-medium pt-1">
-                                  {notif.time}
+                                  {formatDate(notif.created_at)}
                                 </p>
                               </div>
                             </div>
